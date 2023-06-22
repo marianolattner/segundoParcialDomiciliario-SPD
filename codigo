@@ -1,0 +1,145 @@
+#include <Servo.h>
+
+#include <IRremote.h>
+
+#include <LiquidCrystal.h>
+
+#define LED_UNO 10
+#define LED_DOS 11
+#define sensor A0
+#define botonUno 0xEF10BF00
+#define botonDos 0xEE11BF00
+#define botonTres 0xED12BF00
+#define botonCuatro 0xEB14BF00
+#define botonOff 0xFF00BF00
+
+Servo servoMotor; // declaro la variable para controlar el servo
+
+LiquidCrystal lcd(2,3,4,5,6,7);
+int IR = 12; // conecto el sensor IR al pin 12
+void setup()
+{
+  	servoMotor.attach(9); // lo inicio en el pin 9
+  	lcd.begin(16,2);
+  	lcd.setCursor(0,0);
+  	Serial.begin(9600);
+	IrReceiver.begin(IR, DISABLE_LED_FEEDBACK);// empieza  a recibir la señal
+  
+  	pinMode(LED_UNO, OUTPUT);
+  	pinMode(LED_DOS, OUTPUT);
+}
+
+void loop()
+{
+  	int lectura = analogRead(sensor);
+  	int temperatura = map(lectura,20,358,-40,125);
+   // Serial.println(temperatura);
+  	mostrarEstacion(temperatura);
+  	mostrarTemperatura( temperatura);
+    if (IrReceiver.decode()) { // verifico si se trata de una señal IR valida          
+   // Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);  
+     IrReceiver.resume();
+     lcd.clear();
+    
+    }
+  	else 
+    {
+     apagarAlarma(); 
+    }
+  
+}
+
+void mostrarEstacion(int temperatura)
+{
+  lcd.setCursor(0, 0);
+ 	 switch (IrReceiver.decodedIRData.decodedRawData)
+        {
+            case botonUno:
+       			lcd.print("Verano");
+       			if (temperatura > 55)// si llega a 56 grados celcius se activa la alarma
+                {
+                 	 encenderAlarma(); 
+                }
+       			else 
+                {
+                 	apagarAlarma(); 
+                }
+                break;
+            case botonDos:
+       			
+       			lcd.print("Otonio");
+       			if (temperatura > 37)// si llega a 38 grados celcius se activa la alarma
+                {
+                 	encenderAlarma();   
+                }
+              	
+       			else 
+                {
+                 	apagarAlarma();
+                }
+                break;
+      		case botonTres:
+       			
+      			lcd.print("Invierno");
+       			if ( temperatura > 28)// si llega a 29 grados celcius se activa la alarma
+                {
+                 	encenderAlarma();  
+                }
+              	
+       			else 
+                {
+                 	apagarAlarma(); 
+                }
+       			break;
+      		case botonCuatro:
+       			
+      			lcd.print("Primavera");// si llega a 38 grados celcius se activa la alarma
+       			if (temperatura > 37)
+                {
+                 	encenderAlarma(); 
+                }
+       
+       	       	else 
+                {
+                 	apagarAlarma(); 
+                }
+       			break;
+       		case botonOff:
+       			apagarAlarma();
+    	}
+}
+
+void mostrarTemperatura(int temp)
+{
+  lcd.setCursor(0, 1);
+  lcd.print(temp);
+  lcd.print(" C");
+}
+
+void encenderAlarma()
+{
+    digitalWrite(LED_UNO, HIGH);
+    digitalWrite(LED_DOS, HIGH);
+    lcd.clear();
+    lcd.print("¡INCENDIO!");
+
+    for (int angle = 0; angle <= 180; angle++)
+    {
+        servoMotor.write(angle);
+        delay(15);
+    }
+
+    for (int angle = 180; angle >= 0; angle--)
+    {
+        servoMotor.write(angle);
+        delay(15);
+    }
+    lcd.clear(); // Limpiar la pantalla LCD
+}
+
+void apagarAlarma()
+{
+  digitalWrite(LED_UNO, LOW);
+  digitalWrite(LED_DOS, LOW);
+  servoMotor.write(0); // Volver a la posición inicial (0°)
+}
